@@ -1,1 +1,603 @@
-{"metadata":{"kernelspec":{"language":"python","display_name":"Python 3","name":"python3"},"language_info":{"name":"python","version":"3.11.13","mimetype":"text/x-python","codemirror_mode":{"name":"ipython","version":3},"pygments_lexer":"ipython3","nbconvert_exporter":"python","file_extension":".py"},"kaggle":{"accelerator":"none","dataSources":[],"dockerImageVersionId":31089,"isInternetEnabled":true,"language":"python","sourceType":"notebook","isGpuEnabled":false}},"nbformat_minor":4,"nbformat":4,"cells":[{"cell_type":"code","source":"# This Python 3 environment comes with many helpful analytics libraries installed\n# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python\n# For example, here's several helpful packages to load\n\nimport numpy as np # linear algebra\nimport pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\n\n# Input data files are available in the read-only \"../input/\" directory\n# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory\n\nimport os\nfor dirname, _, filenames in os.walk('/kaggle/input'):\n    for filename in filenames:\n        print(os.path.join(dirname, filename))\n\n# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using \"Save & Run All\" \n# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session","metadata":{"_uuid":"8f2839f25d086af736a60e9eeb907d3b93b6e0e5","_cell_guid":"b1076dfc-b9ad-4769-8c92-a6c4dae69d19","trusted":true,"execution":{"iopub.status.busy":"2025-09-05T05:25:13.496882Z","iopub.execute_input":"2025-09-05T05:25:13.497248Z","iopub.status.idle":"2025-09-05T05:25:16.047805Z","shell.execute_reply.started":"2025-09-05T05:25:13.497222Z","shell.execute_reply":"2025-09-05T05:25:16.046738Z"}},"outputs":[],"execution_count":1},{"cell_type":"code","source":"sales = pd.DataFrame({\n    'id': [101, 102, 103, 104, 105, 106],\n    'client_id': [1, 2, 1, 3, 4, 5],  # client_id = 4 and 5 not in clients\n    'item': ['TechBook Pro 15', 'ViewMax 24HD', 'KeyPro MX', 'TechBook Air', 'ClickOne Mini', 'SoundX Pro'],\n    'amount': [1200, 300, 100, 1300, 50, 500]\n})\n\nclients = pd.DataFrame({\n    'client_id': [1, 2, 3, 6],  # client_id = 6 is not in sales\n    'client_name': ['Alice', 'Bob', 'Charlie', 'Diana'],\n    'region_id': [10, 11, 10, 12]\n})","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2025-09-05T05:25:18.736232Z","iopub.execute_input":"2025-09-05T05:25:18.736577Z","iopub.status.idle":"2025-09-05T05:25:18.749344Z","shell.execute_reply.started":"2025-09-05T05:25:18.736548Z","shell.execute_reply":"2025-09-05T05:25:18.748244Z"}},"outputs":[],"execution_count":2},{"cell_type":"code","source":"#find users who placed an order but are absent in \"clients\":\n#first, merge datasets with outer to see all values, including nans:\ndf = sales.merge(clients, on = 'client_id', how = 'outer')\ndf","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2025-09-05T05:25:26.429433Z","iopub.execute_input":"2025-09-05T05:25:26.429727Z","iopub.status.idle":"2025-09-05T05:25:26.494128Z","shell.execute_reply.started":"2025-09-05T05:25:26.429704Z","shell.execute_reply":"2025-09-05T05:25:26.493077Z"}},"outputs":[{"name":"stderr","text":"/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1458: RuntimeWarning: invalid value encountered in greater\n  has_large_values = (abs_vals > 1e6).any()\n/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1459: RuntimeWarning: invalid value encountered in less\n  has_small_values = ((abs_vals < 10 ** (-self.digits)) & (abs_vals > 0)).any()\n/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1459: RuntimeWarning: invalid value encountered in greater\n  has_small_values = ((abs_vals < 10 ** (-self.digits)) & (abs_vals > 0)).any()\n","output_type":"stream"},{"execution_count":3,"output_type":"execute_result","data":{"text/plain":"      id  client_id             item  amount client_name  region_id\n0  101.0          1  TechBook Pro 15  1200.0       Alice       10.0\n1  103.0          1        KeyPro MX   100.0       Alice       10.0\n2  102.0          2     ViewMax 24HD   300.0         Bob       11.0\n3  104.0          3     TechBook Air  1300.0     Charlie       10.0\n4  105.0          4    ClickOne Mini    50.0         NaN        NaN\n5  106.0          5       SoundX Pro   500.0         NaN        NaN\n6    NaN          6              NaN     NaN       Diana       12.0","text/html":"<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>id</th>\n      <th>client_id</th>\n      <th>item</th>\n      <th>amount</th>\n      <th>client_name</th>\n      <th>region_id</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>101.0</td>\n      <td>1</td>\n      <td>TechBook Pro 15</td>\n      <td>1200.0</td>\n      <td>Alice</td>\n      <td>10.0</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>103.0</td>\n      <td>1</td>\n      <td>KeyPro MX</td>\n      <td>100.0</td>\n      <td>Alice</td>\n      <td>10.0</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>102.0</td>\n      <td>2</td>\n      <td>ViewMax 24HD</td>\n      <td>300.0</td>\n      <td>Bob</td>\n      <td>11.0</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>104.0</td>\n      <td>3</td>\n      <td>TechBook Air</td>\n      <td>1300.0</td>\n      <td>Charlie</td>\n      <td>10.0</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>105.0</td>\n      <td>4</td>\n      <td>ClickOne Mini</td>\n      <td>50.0</td>\n      <td>NaN</td>\n      <td>NaN</td>\n    </tr>\n    <tr>\n      <th>5</th>\n      <td>106.0</td>\n      <td>5</td>\n      <td>SoundX Pro</td>\n      <td>500.0</td>\n      <td>NaN</td>\n      <td>NaN</td>\n    </tr>\n    <tr>\n      <th>6</th>\n      <td>NaN</td>\n      <td>6</td>\n      <td>NaN</td>\n      <td>NaN</td>\n      <td>Diana</td>\n      <td>12.0</td>\n    </tr>\n  </tbody>\n</table>\n</div>"},"metadata":{}}],"execution_count":3},{"cell_type":"code","source":"#now from the resulting dataframe, find users who placed an order but are absent in \"clients\":\nabsent_clients = df.loc[df['client_name'].isna(), 'client_id'].tolist()\nprint(f\"Ids of clients who placed order but are absent in the client list are: {absent_clients}\")","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2025-09-05T05:25:59.842782Z","iopub.execute_input":"2025-09-05T05:25:59.843124Z","iopub.status.idle":"2025-09-05T05:25:59.850173Z","shell.execute_reply.started":"2025-09-05T05:25:59.843098Z","shell.execute_reply":"2025-09-05T05:25:59.849220Z"}},"outputs":[{"name":"stdout","text":"Ids of clients who placed order but are absent in the client list are: [4, 5]\n","output_type":"stream"}],"execution_count":4},{"cell_type":"code","source":"#find how many user didn't place order:\nno_order_clients = len(df.loc[df['item'].isna()])\nprint(f\"The number of clients who didn't place order is: {no_order_clients}\")","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2025-09-05T05:26:08.763462Z","iopub.execute_input":"2025-09-05T05:26:08.763785Z","iopub.status.idle":"2025-09-05T05:26:08.771082Z","shell.execute_reply.started":"2025-09-05T05:26:08.763757Z","shell.execute_reply":"2025-09-05T05:26:08.770036Z"}},"outputs":[{"name":"stdout","text":"The number of clients who didn't place order is: 1\n","output_type":"stream"}],"execution_count":5},{"cell_type":"code","source":"#replace nans in \"client_name\" with \"Unknown client\"\n#replace nans in \"item\" with \"No order\"\ndf[\"client_name\"] = df[\"client_name\"].fillna(\"Unknown client\") #use fillna\ndf[\"item\"] = np.where(df[\"item\"].isna(), \"No order\", df[\"item\"]) #use np.where()\ndf","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2025-09-05T05:45:30.650661Z","iopub.execute_input":"2025-09-05T05:45:30.650992Z","iopub.status.idle":"2025-09-05T05:45:30.665946Z","shell.execute_reply.started":"2025-09-05T05:45:30.650967Z","shell.execute_reply":"2025-09-05T05:45:30.664980Z"}},"outputs":[{"name":"stderr","text":"/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1458: RuntimeWarning: invalid value encountered in greater\n  has_large_values = (abs_vals > 1e6).any()\n/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1459: RuntimeWarning: invalid value encountered in less\n  has_small_values = ((abs_vals < 10 ** (-self.digits)) & (abs_vals > 0)).any()\n/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1459: RuntimeWarning: invalid value encountered in greater\n  has_small_values = ((abs_vals < 10 ** (-self.digits)) & (abs_vals > 0)).any()\n","output_type":"stream"},{"execution_count":10,"output_type":"execute_result","data":{"text/plain":"      id  client_id             item  amount     client_name  region_id\n0  101.0          1  TechBook Pro 15  1200.0           Alice       10.0\n1  103.0          1        KeyPro MX   100.0           Alice       10.0\n2  102.0          2     ViewMax 24HD   300.0             Bob       11.0\n3  104.0          3     TechBook Air  1300.0         Charlie       10.0\n4  105.0          4    ClickOne Mini    50.0  Unknown client        NaN\n5  106.0          5       SoundX Pro   500.0  Unknown client        NaN\n6    NaN          6         No order     NaN           Diana       12.0","text/html":"<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>id</th>\n      <th>client_id</th>\n      <th>item</th>\n      <th>amount</th>\n      <th>client_name</th>\n      <th>region_id</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>101.0</td>\n      <td>1</td>\n      <td>TechBook Pro 15</td>\n      <td>1200.0</td>\n      <td>Alice</td>\n      <td>10.0</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>103.0</td>\n      <td>1</td>\n      <td>KeyPro MX</td>\n      <td>100.0</td>\n      <td>Alice</td>\n      <td>10.0</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>102.0</td>\n      <td>2</td>\n      <td>ViewMax 24HD</td>\n      <td>300.0</td>\n      <td>Bob</td>\n      <td>11.0</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>104.0</td>\n      <td>3</td>\n      <td>TechBook Air</td>\n      <td>1300.0</td>\n      <td>Charlie</td>\n      <td>10.0</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>105.0</td>\n      <td>4</td>\n      <td>ClickOne Mini</td>\n      <td>50.0</td>\n      <td>Unknown client</td>\n      <td>NaN</td>\n    </tr>\n    <tr>\n      <th>5</th>\n      <td>106.0</td>\n      <td>5</td>\n      <td>SoundX Pro</td>\n      <td>500.0</td>\n      <td>Unknown client</td>\n      <td>NaN</td>\n    </tr>\n    <tr>\n      <th>6</th>\n      <td>NaN</td>\n      <td>6</td>\n      <td>No order</td>\n      <td>NaN</td>\n      <td>Diana</td>\n      <td>12.0</td>\n    </tr>\n  </tbody>\n</table>\n</div>"},"metadata":{}}],"execution_count":10},{"cell_type":"code","source":"#show the each client's number of orders:\n#this is tricky because \"No order\" is just another item for the program and it'll count it as such.\n#to solve this problem, group clients with itesm, create boolean mask on \"No order\", where item != No order is True, item == No order is False\n#for each group, sum up True(1) and False(0)\nnumber_of_orders = df.groupby('client_name')['item'].apply(lambda x: (x != 'No order').sum())\nnumber_of_orders = pd.DataFrame(number_of_orders).reset_index()\nnumber_of_orders.columns = ['Client', 'Number_of_orders']\nnumber_of_orders.sort_values(by = 'Number_of_orders', ascending = False)","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2025-09-05T06:53:10.029376Z","iopub.execute_input":"2025-09-05T06:53:10.029689Z","iopub.status.idle":"2025-09-05T06:53:10.043309Z","shell.execute_reply.started":"2025-09-05T06:53:10.029664Z","shell.execute_reply":"2025-09-05T06:53:10.042413Z"}},"outputs":[{"execution_count":20,"output_type":"execute_result","data":{"text/plain":"           Client  Number_of_orders\n0           Alice                 2\n4  Unknown client                 2\n1             Bob                 1\n2         Charlie                 1\n3           Diana                 0","text/html":"<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>Client</th>\n      <th>Number_of_orders</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>Alice</td>\n      <td>2</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>Unknown client</td>\n      <td>2</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>Bob</td>\n      <td>1</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>Charlie</td>\n      <td>1</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>Diana</td>\n      <td>0</td>\n    </tr>\n  </tbody>\n</table>\n</div>"},"metadata":{}}],"execution_count":20}]}
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "6c11b397",
+   "metadata": {
+    "_cell_guid": "b1076dfc-b9ad-4769-8c92-a6c4dae69d19",
+    "_uuid": "8f2839f25d086af736a60e9eeb907d3b93b6e0e5",
+    "execution": {
+     "iopub.execute_input": "2025-09-05T06:56:59.291531Z",
+     "iopub.status.busy": "2025-09-05T06:56:59.291210Z",
+     "iopub.status.idle": "2025-09-05T06:57:01.294085Z",
+     "shell.execute_reply": "2025-09-05T06:57:01.292802Z"
+    },
+    "papermill": {
+     "duration": 2.008751,
+     "end_time": "2025-09-05T06:57:01.295969",
+     "exception": false,
+     "start_time": "2025-09-05T06:56:59.287218",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "# This Python 3 environment comes with many helpful analytics libraries installed\n",
+    "# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python\n",
+    "# For example, here's several helpful packages to load\n",
+    "\n",
+    "import numpy as np # linear algebra\n",
+    "import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\n",
+    "\n",
+    "# Input data files are available in the read-only \"../input/\" directory\n",
+    "# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory\n",
+    "\n",
+    "import os\n",
+    "for dirname, _, filenames in os.walk('/kaggle/input'):\n",
+    "    for filename in filenames:\n",
+    "        print(os.path.join(dirname, filename))\n",
+    "\n",
+    "# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using \"Save & Run All\" \n",
+    "# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "ffdc2e35",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-09-05T06:57:01.302315Z",
+     "iopub.status.busy": "2025-09-05T06:57:01.301864Z",
+     "iopub.status.idle": "2025-09-05T06:57:01.312661Z",
+     "shell.execute_reply": "2025-09-05T06:57:01.311708Z"
+    },
+    "papermill": {
+     "duration": 0.015545,
+     "end_time": "2025-09-05T06:57:01.314217",
+     "exception": false,
+     "start_time": "2025-09-05T06:57:01.298672",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "sales = pd.DataFrame({\n",
+    "    'id': [101, 102, 103, 104, 105, 106],\n",
+    "    'client_id': [1, 2, 1, 3, 4, 5],  # client_id = 4 and 5 not in clients\n",
+    "    'item': ['TechBook Pro 15', 'ViewMax 24HD', 'KeyPro MX', 'TechBook Air', 'ClickOne Mini', 'SoundX Pro'],\n",
+    "    'amount': [1200, 300, 100, 1300, 50, 500]\n",
+    "})\n",
+    "\n",
+    "clients = pd.DataFrame({\n",
+    "    'client_id': [1, 2, 3, 6],  # client_id = 6 is not in sales\n",
+    "    'client_name': ['Alice', 'Bob', 'Charlie', 'Diana'],\n",
+    "    'region_id': [10, 11, 10, 12]\n",
+    "})"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "746a1f32",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-09-05T06:57:01.319669Z",
+     "iopub.status.busy": "2025-09-05T06:57:01.319374Z",
+     "iopub.status.idle": "2025-09-05T06:57:01.373005Z",
+     "shell.execute_reply": "2025-09-05T06:57:01.372050Z"
+    },
+    "papermill": {
+     "duration": 0.058022,
+     "end_time": "2025-09-05T06:57:01.374520",
+     "exception": false,
+     "start_time": "2025-09-05T06:57:01.316498",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1458: RuntimeWarning: invalid value encountered in greater\n",
+      "  has_large_values = (abs_vals > 1e6).any()\n",
+      "/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1459: RuntimeWarning: invalid value encountered in less\n",
+      "  has_small_values = ((abs_vals < 10 ** (-self.digits)) & (abs_vals > 0)).any()\n",
+      "/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1459: RuntimeWarning: invalid value encountered in greater\n",
+      "  has_small_values = ((abs_vals < 10 ** (-self.digits)) & (abs_vals > 0)).any()\n"
+     ]
+    },
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>id</th>\n",
+       "      <th>client_id</th>\n",
+       "      <th>item</th>\n",
+       "      <th>amount</th>\n",
+       "      <th>client_name</th>\n",
+       "      <th>region_id</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>101.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>TechBook Pro 15</td>\n",
+       "      <td>1200.0</td>\n",
+       "      <td>Alice</td>\n",
+       "      <td>10.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>103.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>KeyPro MX</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>Alice</td>\n",
+       "      <td>10.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>102.0</td>\n",
+       "      <td>2</td>\n",
+       "      <td>ViewMax 24HD</td>\n",
+       "      <td>300.0</td>\n",
+       "      <td>Bob</td>\n",
+       "      <td>11.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>104.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>TechBook Air</td>\n",
+       "      <td>1300.0</td>\n",
+       "      <td>Charlie</td>\n",
+       "      <td>10.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>105.0</td>\n",
+       "      <td>4</td>\n",
+       "      <td>ClickOne Mini</td>\n",
+       "      <td>50.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>106.0</td>\n",
+       "      <td>5</td>\n",
+       "      <td>SoundX Pro</td>\n",
+       "      <td>500.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>6</th>\n",
+       "      <td>NaN</td>\n",
+       "      <td>6</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>Diana</td>\n",
+       "      <td>12.0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "      id  client_id             item  amount client_name  region_id\n",
+       "0  101.0          1  TechBook Pro 15  1200.0       Alice       10.0\n",
+       "1  103.0          1        KeyPro MX   100.0       Alice       10.0\n",
+       "2  102.0          2     ViewMax 24HD   300.0         Bob       11.0\n",
+       "3  104.0          3     TechBook Air  1300.0     Charlie       10.0\n",
+       "4  105.0          4    ClickOne Mini    50.0         NaN        NaN\n",
+       "5  106.0          5       SoundX Pro   500.0         NaN        NaN\n",
+       "6    NaN          6              NaN     NaN       Diana       12.0"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#find users who placed an order but are absent in \"clients\":\n",
+    "#first, merge datasets with outer to see all values, including nans:\n",
+    "df = sales.merge(clients, on = 'client_id', how = 'outer')\n",
+    "df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "a8282fe8",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-09-05T06:57:01.380905Z",
+     "iopub.status.busy": "2025-09-05T06:57:01.380547Z",
+     "iopub.status.idle": "2025-09-05T06:57:01.387323Z",
+     "shell.execute_reply": "2025-09-05T06:57:01.386099Z"
+    },
+    "papermill": {
+     "duration": 0.011869,
+     "end_time": "2025-09-05T06:57:01.388994",
+     "exception": false,
+     "start_time": "2025-09-05T06:57:01.377125",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Ids of clients who placed order but are absent in the client list are: [4, 5]\n"
+     ]
+    }
+   ],
+   "source": [
+    "#now from the resulting dataframe, find users who placed an order but are absent in \"clients\":\n",
+    "absent_clients = df.loc[df['client_name'].isna(), 'client_id'].tolist()\n",
+    "print(f\"Ids of clients who placed order but are absent in the client list are: {absent_clients}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "aba17ae8",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-09-05T06:57:01.395630Z",
+     "iopub.status.busy": "2025-09-05T06:57:01.395279Z",
+     "iopub.status.idle": "2025-09-05T06:57:01.402244Z",
+     "shell.execute_reply": "2025-09-05T06:57:01.401186Z"
+    },
+    "papermill": {
+     "duration": 0.012219,
+     "end_time": "2025-09-05T06:57:01.403827",
+     "exception": false,
+     "start_time": "2025-09-05T06:57:01.391608",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "The number of clients who didn't place order is: 1\n"
+     ]
+    }
+   ],
+   "source": [
+    "#find how many user didn't place order:\n",
+    "no_order_clients = len(df.loc[df['item'].isna()])\n",
+    "print(f\"The number of clients who didn't place order is: {no_order_clients}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "e5e3d5bb",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-09-05T06:57:01.409988Z",
+     "iopub.status.busy": "2025-09-05T06:57:01.409642Z",
+     "iopub.status.idle": "2025-09-05T06:57:01.424451Z",
+     "shell.execute_reply": "2025-09-05T06:57:01.423267Z"
+    },
+    "papermill": {
+     "duration": 0.019587,
+     "end_time": "2025-09-05T06:57:01.425978",
+     "exception": false,
+     "start_time": "2025-09-05T06:57:01.406391",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1458: RuntimeWarning: invalid value encountered in greater\n",
+      "  has_large_values = (abs_vals > 1e6).any()\n",
+      "/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1459: RuntimeWarning: invalid value encountered in less\n",
+      "  has_small_values = ((abs_vals < 10 ** (-self.digits)) & (abs_vals > 0)).any()\n",
+      "/usr/local/lib/python3.11/dist-packages/pandas/io/formats/format.py:1459: RuntimeWarning: invalid value encountered in greater\n",
+      "  has_small_values = ((abs_vals < 10 ** (-self.digits)) & (abs_vals > 0)).any()\n"
+     ]
+    },
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>id</th>\n",
+       "      <th>client_id</th>\n",
+       "      <th>item</th>\n",
+       "      <th>amount</th>\n",
+       "      <th>client_name</th>\n",
+       "      <th>region_id</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>101.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>TechBook Pro 15</td>\n",
+       "      <td>1200.0</td>\n",
+       "      <td>Alice</td>\n",
+       "      <td>10.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>103.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>KeyPro MX</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>Alice</td>\n",
+       "      <td>10.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>102.0</td>\n",
+       "      <td>2</td>\n",
+       "      <td>ViewMax 24HD</td>\n",
+       "      <td>300.0</td>\n",
+       "      <td>Bob</td>\n",
+       "      <td>11.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>104.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>TechBook Air</td>\n",
+       "      <td>1300.0</td>\n",
+       "      <td>Charlie</td>\n",
+       "      <td>10.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>105.0</td>\n",
+       "      <td>4</td>\n",
+       "      <td>ClickOne Mini</td>\n",
+       "      <td>50.0</td>\n",
+       "      <td>Unknown client</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>106.0</td>\n",
+       "      <td>5</td>\n",
+       "      <td>SoundX Pro</td>\n",
+       "      <td>500.0</td>\n",
+       "      <td>Unknown client</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>6</th>\n",
+       "      <td>NaN</td>\n",
+       "      <td>6</td>\n",
+       "      <td>No order</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>Diana</td>\n",
+       "      <td>12.0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "      id  client_id             item  amount     client_name  region_id\n",
+       "0  101.0          1  TechBook Pro 15  1200.0           Alice       10.0\n",
+       "1  103.0          1        KeyPro MX   100.0           Alice       10.0\n",
+       "2  102.0          2     ViewMax 24HD   300.0             Bob       11.0\n",
+       "3  104.0          3     TechBook Air  1300.0         Charlie       10.0\n",
+       "4  105.0          4    ClickOne Mini    50.0  Unknown client        NaN\n",
+       "5  106.0          5       SoundX Pro   500.0  Unknown client        NaN\n",
+       "6    NaN          6         No order     NaN           Diana       12.0"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#replace nans in \"client_name\" with \"Unknown client\"\n",
+    "#replace nans in \"item\" with \"No order\"\n",
+    "df[\"client_name\"] = df[\"client_name\"].fillna(\"Unknown client\") #use fillna\n",
+    "df[\"item\"] = np.where(df[\"item\"].isna(), \"No order\", df[\"item\"]) #use np.where()\n",
+    "df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "1e56b658",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-09-05T06:57:01.432964Z",
+     "iopub.status.busy": "2025-09-05T06:57:01.432604Z",
+     "iopub.status.idle": "2025-09-05T06:57:01.450701Z",
+     "shell.execute_reply": "2025-09-05T06:57:01.449876Z"
+    },
+    "papermill": {
+     "duration": 0.023603,
+     "end_time": "2025-09-05T06:57:01.452546",
+     "exception": false,
+     "start_time": "2025-09-05T06:57:01.428943",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Client</th>\n",
+       "      <th>Number_of_orders</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Alice</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>Unknown client</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Bob</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>Charlie</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>Diana</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "           Client  Number_of_orders\n",
+       "0           Alice                 2\n",
+       "4  Unknown client                 2\n",
+       "1             Bob                 1\n",
+       "2         Charlie                 1\n",
+       "3           Diana                 0"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#show the each client's number of orders:\n",
+    "#this is tricky because \"No order\" is just another item for the program and it'll count it as such.\n",
+    "#to solve this problem, group clients with itesm, create boolean mask on \"No order\", where item != No order is True, item == No order is False\n",
+    "#for each group, sum up True(1) and False(0)\n",
+    "number_of_orders = df.groupby('client_name')['item'].apply(lambda x: (x != 'No order').sum())\n",
+    "number_of_orders = pd.DataFrame(number_of_orders).reset_index()\n",
+    "number_of_orders.columns = ['Client', 'Number_of_orders']\n",
+    "number_of_orders.sort_values(by = 'Number_of_orders', ascending = False)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [],
+   "dockerImageVersionId": 31089,
+   "isGpuEnabled": false,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.13"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 8.333455,
+   "end_time": "2025-09-05T06:57:01.978811",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2025-09-05T06:56:53.645356",
+   "version": "2.6.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
